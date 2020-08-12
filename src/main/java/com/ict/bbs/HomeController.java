@@ -1,39 +1,71 @@
 package com.ict.bbs;
 
-import java.text.DateFormat;
-import java.util.Date;
 import java.util.Locale;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.servlet.ModelAndView;
 
-/**
- * Handles requests for the application home page.
- */
+import mybatis.dao.BoardDAO;
+import mybatis.vo.BoardVO;
+import spring.util.Paging;
+
 @Controller
 public class HomeController {
 	
-	private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
 	
-	/**
-	 * Simply selects the home view to render by returning its name.
-	 */
-	@RequestMapping(value = "/", method = RequestMethod.GET)
-	public String home(Locale locale, Model model) {
-		logger.info("Welcome home! The client locale is {}.", locale);
+	@Autowired 
+	private BoardDAO bDao;
+	
+	int nowPage;
+	
+	//상수
+	public static final int BLOCK_LIST = 5; //한 페이지당 보여질 게시물 수
+	public static final int BLOCK_PAGE = 5; //한 블록당 보여질 페이지 수
+	
+	int rowTotal; //전체 게시물 수
+	String pageCode; //페이징 처리된 HTML코드가 저장될 곳!
+		 
+	
+	@RequestMapping("board")
+	public ModelAndView home(String nowPage,String bname) {
+
+		if(nowPage == null)
+			this.nowPage = 1;
+		else this.nowPage = Integer.parseInt(nowPage);
 		
-		Date date = new Date();
-		DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.LONG, locale);
 		
-		String formattedDate = dateFormat.format(date);
+		if(bname == null)
+			bname = "BBS";
 		
-		model.addAttribute("serverTime", formattedDate );
+		rowTotal = bDao.getToatalCount(bname);
 		
-		return "home";
+		Paging page = new Paging(this.nowPage,rowTotal,BLOCK_LIST,BLOCK_PAGE);
+		
+		pageCode = page.getSb().toString();
+		
+		
+		ModelAndView mv = new ModelAndView();
+		
+		
+		int begin = page.getBegin();
+		int end = page.getEnd();
+				
+		BoardVO[] ar = bDao.list(String.valueOf(begin),String.valueOf(end),bname);
+		
+		mv.addObject("pageCode",pageCode);
+		mv.addObject("nowPage",this.nowPage);
+		mv.addObject("rowTotal",rowTotal);
+		mv.addObject("blockList",BLOCK_LIST);
+		
+		
+		mv.addObject("list",ar);
+		mv.setViewName("list");
+		
+		return mv;
 	}
 	
 }
